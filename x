@@ -133,7 +133,13 @@ spearman <- function(sum_sq, n) {
 spearman_rho_manual <- spearman(sum_squares, n)
 spearman_rho_manual
 
-# Spearman with cor.test()
+# Spearman with cor.test(), the result slightly differs.
+# The cor.test() function also returns a message
+# "cannot compute exact p-vaue with ties" because not all ranks are
+# distinct from one another (ties). The help documents from R point
+# out that when there are ties, asymptotic approximation is used to
+# calculate the spearman's rank correlation coefficient
+# (similarly as to when exact=FALSE).
 spearmman_rho_cort <- cor.test(x=data$nasal,
                            y=data$endo,
                            method="spearman",
@@ -166,40 +172,36 @@ spearmman_rho_cort$p.value # P-value from cor.test()
 ############################################
 
 # Setting a seed for reproducibility
-set.seed(71991)
+set.seed(35611)
 
 # Settings
 R <- 10000                    # Amount of replicates
 simulations_rho_manual <- c() # Result array for manual rho
 
-# Permutations
+# Permutation for R permutations
 for (i in 1:R) {
   # Sample and rank both variables
   nasal_r <- sample(data.ranked$nasal, replace=F)
   endo_r <- sample(data.ranked$endo, replace=F)
-  sample_r <- data.frame(cbind(nasal_r, endo_r))
+  # Sum of squares of the ranks from the observations
+  sample_sum_sq <- sum((nasal_r - endo_r)^2)
   # Calculate spearman
-  spearman_r <- cov(sample_r) /
-                (sd(sample_r$nasal_r) * sd(sample_r$endo_r))
-  simulations_rho_manual[i] <- spearman_r[[2]]
+  simulations_rho_manual[i] <- spearman(sample_sum_sq, n)
 }
 
-
-
 # Critical value
-critical_value_manual <- quantile(simulations_rho_manual, probs=0.95)
-critical_value_manual
+critical_value <- quantile(simulations_rho_manual, probs=0.95)
+critical_value
 
 # P-value
-p.value_manual <- mean(simulations_rho_manual >=
-                         as.numeric(spearmman_rho_cort$estimate))
+p.value_manual <- mean(simulations_rho_manual >= as.numeric(spearmman_rho_cort$estimate))
 p.value_manual
 
-# Histogram with critical value and the observed spearman
+# Histogram with critical value and the observed spearman's for manual calculation
 hist(simulations_rho_manual, breaks=20,xlim=c(-1,1),
      main="Exact permutation null distribution manual")
-abline(v=critical_value_manual, col="blue") # Critical value
-abline(v=spearman_rho_manual, col="red")    # Observed spearman
+abline(v=critical_value, col="blue") # Draw critical value
+abline(v=spearman_rho_manual, col="red")    # Draw the observed spearman's
 
 ############################################
 #### 4. Asymptotic approximation ###########
@@ -221,10 +223,3 @@ p
 
 # Spearman with the Hmisc package
 spearman.test(nasal,endo)
-
-
-
-
-
-
-
